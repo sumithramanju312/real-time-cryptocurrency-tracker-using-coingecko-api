@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoScore Pro - Advanced Rating Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+            50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
+        }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out; }
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .animate-glow { animation: glow 2s ease-in-out infinite; }
+        
+        .glass {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+        
+        .coin-row:hover {
+            background: rgba(168, 85, 247, 0.1);
+            transform: translateX(5px);
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8 animate-fade-in">
+            <div class="flex items-center justify-center gap-4 mb-4">
+                <div class="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-lg animate-glow">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+                    CryptoScore Pro
+                </h1>
+            </div>
+            <p class="text-gray-400 text-lg">Advanced Cryptocurrency Rating & Analysis Platform</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="max-w-3xl mx-auto mb-8 relative">
+            <div class="glass rounded-2xl p-2 border border-purple-500/30 shadow-2xl">
+                <div class="flex items-center gap-2">
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        placeholder="Search coin by name or symbol (e.g., Bitcoin, BTC, ETH)..."
+                        class="flex-1 px-6 py-4 bg-transparent text-white placeholder-gray-400 outline-none text-lg"
+                    >
+                    <button 
+                        id="searchBtn"
+                        class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-8 py-4 rounded-xl font-semibold flex items-center gap-2 transition-all"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        Search
+                    </button>
+                </div>
+            </div>
+            <div id="suggestions" class="absolute w-full mt-2 glass rounded-xl border border-purple-500/30 shadow-2xl overflow-hidden z-50 hidden"></div>
+        </div>
+
+        <!-- Homepage Content -->
+        <div id="homepage" class="space-y-8">
+            <!-- Top Coins by Market Cap -->
+            <div class="glass rounded-3xl p-8 border border-purple-500/30 shadow-2xl animate-fade-in">
+                <h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                    </svg>
+                    Top Coins by Market Cap
+                </h2>
+                <div id="topCoins" class="space-y-3"></div>
+            </div>
+
+            <!-- Gainers and Losers -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Top Gainers -->
+                <div class="glass rounded-3xl p-8 border border-green-500/30 shadow-2xl animate-fade-in">
+                    <h2 class="text-3xl font-bold mb-6 flex items-center gap-3 text-green-400">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        24h Top Gainers 🚀
+                    </h2>
+                    <div id="topGainers" class="space-y-3"></div>
+                </div>
+
+                <!-- Top Losers -->
+                <div class="glass rounded-3xl p-8 border border-red-500/30 shadow-2xl animate-fade-in">
+                    <h2 class="text-3xl font-bold mb-6 flex items-center gap-3 text-red-400">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                        </svg>
+                        24h Top Losers 📉
+                    </h2>
+                    <div id="topLosers" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- Trending NFTs -->
+            <div class="glass rounded-3xl p-8 border border-pink-500/30 shadow-2xl animate-fade-in">
+                <h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+                    <svg class="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                    </svg>
+                    Trending NFTs 🎨
+                </h2>
+                <div id="trendingNFTs" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+            </div>
+
+            <!-- Top Exchanges -->
+            <div class="glass rounded-3xl p-8 border border-blue-500/30 shadow-2xl animate-fade-in">
+                <h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+                    <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                    </svg>
+                    Top Exchanges by Volume 💱
+                </h2>
+                <div id="topExchanges" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-purple-500 border-t-transparent"></div>
+            <p class="mt-4 text-gray-400">Analyzing cryptocurrency...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden max-w-3xl mx-auto mb-8 glass rounded-2xl p-6 border border-red-500">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <p class="text-red-200 text-lg" id="errorMessage"></p>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard" class="hidden animate-fade-in space-y-6">
+            <!-- Back Button -->
+            <button id="backBtn" class="glass px-6 py-3 rounded-xl border border-purple-500/30 hover:border-purple-500 transition-all flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Home
+            </button>
+
+            <!-- Coin Header Card -->
+            <div class="glass rounded-3xl p-8 border border-purple-500/30 shadow-2xl">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <img id="coinImage" src="" alt="" class="w-24 h-24 rounded-full shadow-lg ring-4 ring-purple-500/30">
+                    <div class="flex-1 text-center md:text-left">
+                        <div class="flex items-center gap-3 justify-center md:justify-start mb-2 flex-wrap">
+                            <h2 id="coinName" class="text-4xl font-bold"></h2>
+                            <span id="coinSymbol" class="text-2xl text-gray-400"></span>
+                            <span id="coinRank" class="px-3 py-1 bg-purple-600/30 rounded-full text-sm"></span>
+                        </div>
+                        <div id="coinPrice" class="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2"></div>
+                        <div class="flex items-center gap-4 justify-center md:justify-start text-sm">
+                            <span id="priceChange24h" class="flex items-center gap-1"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Score Badge -->
+                    <div class="relative group">
+                        <div class="absolute -inset-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl blur-lg opacity-50 group-hover:opacity-75 transition"></div>
+                        <div class="relative p-8 bg-slate-900 rounded-3xl border-4 border-purple-500/50 text-center">
+                            <svg class="w-8 h-8 mx-auto mb-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                            </svg>
+                            <div id="totalScore" class="text-5xl font-bold mb-2">0</div>
+                            <div class="text-sm text-gray-400 mb-1">TOTAL SCORE</div>
+                            <div id="gradeLabel" class="text-lg font-bold"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4" id="scoreBreakdown"></div>
+
+            <!-- Warnings -->
+            <div id="warningsContainer" class="hidden glass rounded-2xl p-6 border border-red-500/50 shadow-xl">
+                <div class="flex items-center gap-3 mb-4">
+                    <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <h3 class="text-xl font-bold text-red-400">Risk Warnings</h3>
+                </div>
+                <div id="warningsList" class="space-y-2"></div>
+            </div>
+
+            <!-- Market Data Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass rounded-2xl p-6 border border-purple-500/30 shadow-xl">
+                    <div class="text-gray-400 text-sm mb-2">Market Cap</div>
+                    <div id="marketCap" class="text-2xl font-bold"></div>
+                </div>
+                <div class="glass rounded-2xl p-6 border border-purple-500/30 shadow-xl">
+                    <div class="text-gray-400 text-sm mb-2">24h Volume</div>
+                    <div id="volume24h" class="text-2xl font-bold"></div>
+                </div>
+                <div class="glass rounded-2xl p-6 border border-purple-500/30 shadow-xl">
+                    <div class="text-gray-400 text-sm mb-2">Fully Diluted Valuation</div>
+                    <div id="fdv" class="text-2xl font-bold"></div>
+                </div>
+            </div>
+
+            <!-- Price Chart with Timeframe Tabs -->
+            <div class="glass rounded-2xl p-6 border border-purple-500/30 shadow-xl">
+                <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        Price Chart
+                    </h3>
+                    <div class="flex gap-2 flex-wrap">
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold glass border border-purple-500/30" data-timeframe="7d">7D</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold glass border border-purple-500/30" data-timeframe="14d">14D</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold glass border border-purple-500/30" data-timeframe="30d">30D</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold glass border border-purple-500/30" data-timeframe="60d">60D</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold glass border border-purple-500/30" data-timeframe="1y">1Y</button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <canvas id="priceChart" height="80"></canvas>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div id="descriptionContainer" class="hidden glass rounded-2xl p-6 border border-purple-500/30 shadow-xl">
+                <h3 class="text-xl font-bold mb-4">About <span id="descriptionTitle"></span></h3>
+                <p id="description" class="text-gray-300 leading-relaxed mb-4"></p>
+                <a id="homepageLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition">
+                    Visit Website 
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USD_TO_INR = 83.12;
+        let priceChart = null;
+        let currentCoinId = null;
+
+        // Format number in INR (Lakhs and Crores)
+        function formatINR(num) {
+            if (!num) return 'N/A';
+            const inr = num * USD_TO_INR;
+            
+            if (inr >= 1e7) return `₹${(inr / 1e7).toFixed(2)} Cr`;
+            if (inr >= 1e5) return `₹${(inr / 1e5).toFixed(2)} L`;
+            if (inr >= 1e3) return `₹${(inr / 1e3).toFixed(2)} K`;
+            return `₹${inr.toFixed(2)}`;
+        }
+
+        // Get score color
+        function getScoreColor(score) {
+            if (score >= 90) return 'text-green-400';
+            if (score >= 75) return 'text-blue-400';
+            if (score >= 60) return 'text-yellow-400';
+            if (score >= 45) return 'text-orange-400';
+            return 'text-red-400';
+        }
+
+        // Load homepage data
+        function loadHomepage() {
+            document.getElementById('homepage').innerHTML = `
+                <div class="space-y-8">
+                    <div class="glass rounded-3xl p-8 border border-purple-500/30">
+                        <h2 class="text-3xl font-bold mb-6">Loading market data...</h2>
+                        <div class="space-y-3">
+                            ${Array(5).fill(0).map(() => '<div class="h-16 skeleton rounded-xl"></div>').join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            fetch('/api/homepage')
+                .then(res => res.json())
+                .then(data => {
+                    displayHomepage(data);
+                })
+                .catch(err => {
+                    console.error('Homepage error:', err);
+                    document.getElementById('homepage').innerHTML = '<div class="text-center text-red-400">Failed to load market data</div>';
+                });
+        }
+
+        // Display homepage data
+        function displayHomepage(data) {
+            // Top Coins
+            const topCoinsHTML = data.top_coins.map((coin, idx) => `
+                <div class="coin-row flex items-center gap-4 p-4 rounded-xl cursor-pointer" onclick="searchCoin('${coin.id}')">
+                    <div class="text-gray-400 font-bold w-8">#${idx + 1}</div>
+                    <img src="${coin.image}" alt="${coin.name}" class="w-10 h-10 rounded-full">
+                    <div class="flex-1">
+                        <div class="font-semibold">${coin.name}</div>
+                        <div class="text-sm text-gray-400">${coin.symbol.toUpperCase()}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatINR(coin.current_price)}</div>
+                        <div class="text-sm ${coin.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${coin.price_change_percentage_24h >= 0 ? '↑' : '↓'} ${Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-400">MCap</div>
+                        <div class="text-sm font-semibold">${formatINR(coin.market_cap)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Top Gainers
+            const gainersHTML = data.top_gainers.map((coin, idx) => `
+                <div class="coin-row flex items-center gap-4 p-4 rounded-xl cursor-pointer border border-green-500/20" onclick="searchCoin('${coin.id}')">
+                    <div class="text-green-400 font-bold w-8">#${idx + 1}</div>
+                    <img src="${coin.image}" alt="${coin.name}" class="w-10 h-10 rounded-full">
+                    <div class="flex-1">
+                        <div class="font-semibold">${coin.name}</div>
+                        <div class="text-sm text-gray-400">${coin.symbol.toUpperCase()}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatINR(coin.current_price)}</div>
+                        <div class="text-sm text-green-400 font-bold">
+                            ↑ ${coin.price_change_percentage_24h.toFixed(2)}%
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Top Losers
+            const losersHTML = data.top_losers.map((coin, idx) => `
+                <div class="coin-row flex items-center gap-4 p-4 rounded-xl cursor-pointer border border-red-500/20" onclick="searchCoin('${coin.id}')">
+                    <div class="text-red-400 font-bold w-8">#${idx + 1}</div>
+                    <img src="${coin.image}" alt="${coin.name}" class="w-10 h-10 rounded-full">
+                    <div class="flex-1">
+                        <div class="font-semibold">${coin.name}</div>
+                        <div class="text-sm text-gray-400">${coin.symbol.toUpperCase()}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${formatINR(coin.current_price)}</div>
+                        <div class="text-sm text-red-400 font-bold">
+                            ↓ ${Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Trending NFTs
+            const nftsHTML = data.trending_nfts.map(nft => `
+                <div class="glass rounded-xl p-4 border border-pink-500/30 hover:border-pink-500 transition-all cursor-pointer">
+                    <img src="${nft.thumb}" alt="${nft.name}" class="w-full h-32 object-cover rounded-lg mb-3">
+                    <div class="font-semibold text-sm mb-1">${nft.name}</div>
+                    <div class="text-xs text-gray-400">${nft.symbol}</div>
+                    <div class="text-xs text-pink-400 mt-2">Floor: ${nft.floor_price_in_native_currency?.toFixed(2) || 'N/A'}</div>
+                </div>
+            `).join('');
+
+            // Top Exchanges
+            const exchangesHTML = data.top_exchanges.map((ex, idx) => `
+                <div class="coin-row flex items-center gap-4 p-4 rounded-xl">
+                    <div class="text-blue-400 font-bold w-8">#${idx + 1}</div>
+                    <img src="${ex.image}" alt="${ex.name}" class="w-10 h-10 rounded-full">
+                    <div class="flex-1">
+                        <div class="font-semibold">${ex.name}</div>
+                        <div class="text-sm text-gray-400">Trust Score: ${ex.trust_score}/10</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-400">24h Volume</div>
+                        <div class="font-bold">${formatINR(ex.trade_volume_24h_btc * 50000)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('homepage').innerHTML = `
+                <div class="glass rounded-3xl p-8 border border-purple-500/30 shadow-2xl animate-fade-in">
+                    <h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+                        <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                        </svg>
+                        Top Coins by Market Cap
+                    </h2>
+                    <div class="space-y-3">${topCoinsHTML}</div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass rounded-3xl p-8 border border-green-500/30 shadow-2xl animate-fade-in">
+                        <h2 class="text-3xl font-bold mb-6 flex items-center gap-3 text-green-400">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                            24h Top Gainers 🚀
+                        </h2>
+                        <div class="space-y-3">${gainersHTML}</div>
+                    </div>
+
+                    <div class="glass rounded-3xl p-8 border border-red-500/30 shadow-2xl animate-fade-in">
+                        <h2 class="text-3xl font-bold mb-6 flex items-center gap-3 text-red-400">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                            </svg>
+                            24h Top Losers 📉
+                        </h2>
+                        <div class="space-y-3">${losersHTML}</div>
+                    </div>
+                </div>
+
+                <div class="glass rounded-3xl p-8 border border-pink-500/30 shadow-2xl animate-fade-in">
+                    <h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+                        <svg class="w-8 h-8 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                        </svg>
+                        Trending NFTs 🎨
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">${nftsHTML}</div>
+                </div>
+
+                <div class="glass rounded-3xl p-8 border border-blue-500/30 shadow-2xl animate-fade-in">
+                    <h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+                        <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                        </svg>
+                        Top Exchanges by Volume 💱
+                    </h2>
+                    <div class="space-y-3">${exchangesHTML}</div>
+                </div>
+            `;
+        }
+
+        // Search suggestions
+        let suggestionTimeout;
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            clearTimeout(suggestionTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length < 2) {
+                document.getElementById('suggestions').classList.add('hidden');
+                return;
+            }
+            
+            suggestionTimeout = setTimeout(() => {
+                fetch(`/api/search?query=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const container = document.getElementById('suggestions');
+                        if (data.coins && data.coins.length > 0) {
+                            container.innerHTML = data.coins.map(coin => `
+                                <button onclick="searchCoin('${coin.id}')" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-600/20 transition-colors">
+                                    <img src="${coin.thumb}" alt="${coin.name}" class="w-8 h-8 rounded-full">
+                                    <div class="text-left">
+                                        <div class="font-semibold">${coin.name}</div>
+                                        <div class="text-sm text-gray-400">${coin.symbol.toUpperCase()}</div>
+                                    </div>
+                                    ${coin.market_cap_rank ? `<div class="ml-auto text-xs text-gray-500">#${coin.market_cap_rank}</div>` : ''}
+                                </button>
+                            `).join('');
+                            container.classList.remove('hidden');
+                        } else {
+                            container.classList.add('hidden');
+                        }
+                    })
+                    .catch(err => console.error('Search error:', err));
+            }, 300);
+        });
+
+        // Search coin
+        function searchCoin(coinId) {
+            currentCoinId = coinId;
+            document.getElementById('suggestions').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('homepage').classList.add('hidden');
+            
+            fetch(`/api/coin/${coinId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Coin not found');
+                    return res.json();
+                })
+                .then(data => {
+                    displayDashboard(data);
+                    loadChart('1h');
+                    document.getElementById('loading').classList.add('hidden');
+                })
+                .catch(err => {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('error').classList.remove('hidden');
+                    document.getElementById('errorMessage').textContent = err.message;
+                    document.getElementById('homepage').classList.remove('hidden');
+                });
+        }
+
+        // Load chart data
+        function loadChart(timeframe) {
+            if (!currentCoinId) return;
+            
+            fetch(`/api/chart/${currentCoinId}?timeframe=${timeframe}`)
+                .then(res => res.json())
+                .then(data => {
+                    updateChart(data, timeframe);
+                })
+                .catch(err => console.error('Chart error:', err));
+        }
+
+        // Update chart
+        function updateChart(data, timeframe) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            if (priceChart) priceChart.destroy();
+            
+            const prices = data.prices.map(p => p * USD_TO_INR);
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: prices,
+                        borderColor: '#a855f7',
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#a855f7',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#a855f7',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: (context) => data.labels[context[0].dataIndex],
+                                label: (context) => `₹${context.parsed.y.toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#9ca3af',
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            display: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: (value) => '₹' + value.toFixed(2)
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Display dashboard
+        function displayDashboard(data) {
+            document.getElementById('coinImage').src = data.image;
+            document.getElementById('coinName').textContent = data.name;
+            document.getElementById('coinSymbol').textContent = data.symbol;
+            document.getElementById('coinRank').textContent = data.market_cap_rank ? `Rank #${data.market_cap_rank}` : '';
+            document.getElementById('coinPrice').textContent = formatINR(data.current_price);
+            
+            const change24h = data.price_change_24h || 0;
+            const changeIcon = change24h >= 0 ? '↑' : '↓';
+            const changeColor = change24h >= 0 ? 'text-green-400' : 'text-red-400';
+            document.getElementById('priceChange24h').innerHTML = `
+                <span class="${changeColor}">${changeIcon} ${Math.abs(change24h).toFixed(2)}% (24h)</span>
+            `;
+            
+            document.getElementById('totalScore').textContent = data.analysis.total_score;
+            document.getElementById('gradeLabel').textContent = data.analysis.grade;
+            document.getElementById('gradeLabel').className = `text-lg font-bold ${getScoreColor(data.analysis.total_score)}`;
+            
+            const breakdown = [
+                { label: 'Market Rank', score: data.analysis.breakdown.rank, max: 20 },
+                { label: 'Exchanges', score: data.analysis.breakdown.exchanges, max: 20 },
+                { label: 'Volume Ratio', score: data.analysis.breakdown.volume_ratio, max: 20 },
+                { label: 'FDV Ratio', score: data.analysis.breakdown.fdv_ratio, max: 20 },
+                { label: 'Momentum', score: data.analysis.breakdown.momentum, max: 20 }
+            ];
+            
+            document.getElementById('scoreBreakdown').innerHTML = breakdown.map(item => `
+                <div class="glass rounded-2xl p-6 border border-purple-500/30 shadow-xl hover:scale-105 transition-transform">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-purple-400">★</span>
+                        <span class="text-2xl font-bold">${item.score}/${item.max}</span>
+                    </div>
+                    <div class="text-sm text-gray-400 mb-3">${item.label}</div>
+                    <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000" style="width: ${(item.score / item.max) * 100}%"></div>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (data.analysis.warnings.length > 0) {
+                document.getElementById('warningsContainer').classList.remove('hidden');
+                document.getElementById('warningsList').innerHTML = data.analysis.warnings.map(warning => `
+                    <div class="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
+                        <div class="w-2 h-2 rounded-full bg-red-500 mt-2"></div>
+                        <p class="text-red-200">${warning}</p>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('warningsContainer').classList.add('hidden');
+            }
+            
+            document.getElementById('marketCap').textContent = formatINR(data.market_cap);
+            document.getElementById('volume24h').textContent = formatINR(data.total_volume);
+            document.getElementById('fdv').textContent = formatINR(data.fdv);
+            
+            if (data.description) {
+                document.getElementById('descriptionContainer').classList.remove('hidden');
+                document.getElementById('descriptionTitle').textContent = data.name;
+                const desc = data.description.replace(/<[^>]*>/g, '').split('.').slice(0, 3).join('.') + '...';
+                document.getElementById('description').textContent = desc;
+                
+                if (data.homepage) {
+                    document.getElementById('homepageLink').href = data.homepage;
+                    document.getElementById('homepageLink').classList.remove('hidden');
+                } else {
+                    document.getElementById('homepageLink').classList.add('hidden');
+                }
+            }
+            
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        // Timeframe tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.classList.add('glass', 'border', 'border-purple-500/30');
+                });
+                this.classList.add('active');
+                this.classList.remove('glass', 'border', 'border-purple-500/30');
+                
+                const timeframe = this.dataset.timeframe;
+                loadChart(timeframe);
+            });
+        });
+
+        // Back button
+        document.getElementById('backBtn').addEventListener('click', function() {
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('homepage').classList.remove('hidden');
+            currentCoinId = null;
+        });
+
+        // Search button
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (query) searchCoin(query);
+        });
+
+        // Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = e.target.value.trim().toLowerCase();
+                if (query) searchCoin(query);
+            }
+        });
+
+        // Load homepage on start
+        loadHomepage();
+    </script>
+</body>
+</html>
